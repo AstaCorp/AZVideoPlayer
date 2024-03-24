@@ -25,13 +25,15 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
     let entersFullScreenWhenPlaybackBegins: Bool
     let pausesWhenFullScreenPlaybackEnds: Bool
     
-    public init(player: AVPlayer?,
-                willBeginFullScreenPresentationWithAnimationCoordinator: TransitionCompletion? = nil,
-                willEndFullScreenPresentationWithAnimationCoordinator: TransitionCompletion? = nil,
-                statusDidChange: StatusDidChange? = nil,
-                showsPlaybackControls: Bool = true,
-                entersFullScreenWhenPlaybackBegins: Bool = false,
-                pausesWhenFullScreenPlaybackEnds: Bool = false) {
+    public init(
+        player: AVPlayer?,
+        willBeginFullScreenPresentationWithAnimationCoordinator: TransitionCompletion? = nil,
+        willEndFullScreenPresentationWithAnimationCoordinator: TransitionCompletion? = nil,
+        statusDidChange: StatusDidChange? = nil,
+        showsPlaybackControls: Bool = true,
+        entersFullScreenWhenPlaybackBegins: Bool = false,
+        pausesWhenFullScreenPlaybackEnds: Bool = false
+    ) {
         self.player = player
         self.willBeginFullScreenPresentationWithAnimationCoordinator = willBeginFullScreenPresentationWithAnimationCoordinator
         self.willEndFullScreenPresentationWithAnimationCoordinator = willEndFullScreenPresentationWithAnimationCoordinator
@@ -46,6 +48,7 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
         controller.showsPlaybackControls = showsPlaybackControls
         controller.entersFullScreenWhenPlaybackBegins = entersFullScreenWhenPlaybackBegins
         controller.delegate = context.coordinator
+        forceShowControls(true)
         return controller
     }
     
@@ -55,6 +58,10 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
     
     public func makeCoordinator() -> Coordinator {
         Coordinator(self, statusDidChange)
+    }
+    
+    private func forceShowControls(_ show: Bool) {
+        controller.setValue(!show, forKey: "canHidePlaybackControls")
     }
     
     public final class Coordinator: NSObject, AVPlayerViewControllerDelegate {
@@ -74,16 +81,23 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
             self.parent = parent
             self.statusDidChange = statusDidChange
             super.init()
-            self.timeControlStatusObservation = self.parent.player?.observe(\.timeControlStatus,
-                                                                             changeHandler: { player, _ in
-                statusDidChange?(AZVideoPlayerStatus(timeControlStatus: player.timeControlStatus, volume: player.volume))
-                if self.shouldEnterFullScreenPresentation(of: player) {
-                    parent.controller.enterFullScreenPresentation(animated: true)
-                } else if player.timeControlStatus == .playing {
-                    self.shouldEnterFullScreenPresentationOnNextPlay = true
-                }
-                self.previousTimeControlStatus = player.timeControlStatus
-            })
+            self.timeControlStatusObservation = self.parent.player?.observe(
+                \.timeControlStatus,
+                 
+                 changeHandler: { player, _ in
+                     statusDidChange?(AZVideoPlayerStatus(timeControlStatus: player.timeControlStatus, volume: player.volume))
+                     
+                     parent.forceShowControls(player.timeControlStatus == .paused)
+                     
+                     if self.shouldEnterFullScreenPresentation(of: player) {
+                         parent.controller.enterFullScreenPresentation(animated: true)
+                     } else if player.timeControlStatus == .playing {
+                         self.shouldEnterFullScreenPresentationOnNextPlay = true
+                     }
+
+                     self.previousTimeControlStatus = player.timeControlStatus
+                 }
+            )
         }
         
         public func playerViewController(_ playerViewController: AVPlayerViewController,
