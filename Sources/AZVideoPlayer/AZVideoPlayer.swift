@@ -16,7 +16,8 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
     public typealias Volume = Float
     public typealias StatusDidChange = (AZVideoPlayerStatus) -> Void
     
-    let player: AVPlayer?
+    weak var player: AVPlayer?
+    
     let controller = AVPlayerViewController()
     let willBeginFullScreenPresentationWithAnimationCoordinator: TransitionCompletion?
     let willEndFullScreenPresentationWithAnimationCoordinator: TransitionCompletion?
@@ -70,34 +71,28 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
         var previousTimeControlStatus: AVPlayer.TimeControlStatus?
         var timeControlStatusObservation: NSKeyValueObservation?
         var shouldEnterFullScreenPresentationOnNextPlay: Bool = true
-        
-        func shouldEnterFullScreenPresentation(of player: AVPlayer) -> Bool {
-            guard parent.entersFullScreenWhenPlaybackBegins else { return false }
-            return player.timeControlStatus == .playing && shouldEnterFullScreenPresentationOnNextPlay
-        }
      
         init(_ parent: AZVideoPlayer,
              _ statusDidChange: StatusDidChange? = nil) {
             self.parent = parent
             self.statusDidChange = statusDidChange
             super.init()
-            self.timeControlStatusObservation = self.parent.player?.observe(
-                \.timeControlStatus,
-                 
-                 changeHandler: { player, _ in
-                     statusDidChange?(AZVideoPlayerStatus(timeControlStatus: player.timeControlStatus, volume: player.volume))
-                     
-                     parent.forceShowControls(player.timeControlStatus == .paused)
-                     
-                     if self.shouldEnterFullScreenPresentation(of: player) {
-                         parent.controller.enterFullScreenPresentation(animated: true)
-                     } else if player.timeControlStatus == .playing {
-                         self.shouldEnterFullScreenPresentationOnNextPlay = true
-                     }
-
-                     self.previousTimeControlStatus = player.timeControlStatus
-                 }
-            )
+            
+            self.timeControlStatusObservation = parent.player?.observe(\.timeControlStatus, changeHandler: { [weak self] player, _ in
+                guard let self else { return }
+                
+                statusDidChange?(AZVideoPlayerStatus(timeControlStatus: player.timeControlStatus, volume: player.volume))
+                
+                parent.forceShowControls(player.timeControlStatus == .paused)
+                
+                if self.shouldEnterFullScreenPresentation(of: player) {
+                    parent.controller.enterFullScreenPresentation(animated: true)
+                } else if player.timeControlStatus == .playing {
+                    self.shouldEnterFullScreenPresentationOnNextPlay = true
+                }
+                
+                self.previousTimeControlStatus = player.timeControlStatus
+            })
         }
         
         public func playerViewController(_ playerViewController: AVPlayerViewController,
@@ -113,9 +108,15 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
             parent.willEndFullScreenPresentationWithAnimationCoordinator?(playerViewController, coordinator)
         }
         
-        func continuePlayingIfPlaying(_ player: AVPlayer?,
+        private func shouldEnterFullScreenPresentation(of player: AVPlayer) -> Bool {
+            guard parent.entersFullScreenWhenPlaybackBegins else { return false }
+            return player.timeControlStatus == .playing && shouldEnterFullScreenPresentationOnNextPlay
+        }
+        
+        private func continuePlayingIfPlaying(_ player: AVPlayer?,
                                       _ coordinator: UIViewControllerTransitionCoordinator) {
             let isPlaying = player?.timeControlStatus == .playing
+            
             coordinator.animate(alongsideTransition: nil) { _ in
                 if isPlaying {
                     self.shouldEnterFullScreenPresentationOnNextPlay = false
