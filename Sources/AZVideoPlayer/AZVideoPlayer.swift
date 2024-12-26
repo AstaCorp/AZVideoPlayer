@@ -49,6 +49,7 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
         controller.showsPlaybackControls = showsPlaybackControls
         controller.entersFullScreenWhenPlaybackBegins = entersFullScreenWhenPlaybackBegins
         controller.delegate = context.coordinator
+        controller.videoGravity = .resizeAspectFill
         forceShowControls(true)
         return controller
     }
