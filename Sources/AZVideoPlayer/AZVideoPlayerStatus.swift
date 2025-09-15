@@ -10,5 +10,5 @@ import AVKit
 
 public struct AZVideoPlayerStatus {
     public let timeControlStatus: AVPlayer.TimeControlStatus
-    public let volume: AZVideoPlayer.Volume
+    public let volume: Float
 }
