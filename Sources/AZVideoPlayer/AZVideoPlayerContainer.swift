@@ -1,14 +1,14 @@
 //
-//  AZVideoPlayer.swift
+//  AZPlayerContainer.swift
 //  AZVideoPlayer
 //
-//  Created by Adam Zarn on 7/4/22.
+//  Created by Stanislav Marynych on 15.09.2025.
 //
 
 import SwiftUI
 import AVKit
 
-public struct AZVideoPlayer: UIViewControllerRepresentable {
+public struct AZVideoPlayerContainer: UIViewRepresentable {
     public typealias TransitionCompletion = AZVideoPlayerDelegate.TransitionCompletion
     public typealias StatusDidChange = AZVideoPlayerDelegate.StatusDidChange
 
@@ -34,11 +34,11 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
         )
     }
 
-    public func makeUIViewController(context: Context) -> AVPlayerViewController {
-        delegate.controller
+    public func makeUIView(context: Context) -> UIView {
+        delegate.controller.view
     }
 
-    public func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        uiViewController.player = delegate.player
+    public func updateUIView(_ uiView: UIView, context: Context) {
+        delegate.controller.player = delegate.player
     }
 }
