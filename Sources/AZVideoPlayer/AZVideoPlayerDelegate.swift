@@ -12,7 +12,7 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
     public typealias TransitionCompletion = (AVPlayerViewController, UIViewControllerTransitionCoordinator) -> Void
     public typealias StatusDidChange = (AZVideoPlayerStatus) -> Void
 
-    let controller: AVPlayerViewController
+    var controller: AVPlayerViewController?
     weak var player: AVPlayer?
 
     private let willBeginFullScreen: TransitionCompletion?
@@ -40,11 +40,7 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
         self.pausesWhenFullScreenPlaybackEnds = pausesWhenFullScreenPlaybackEnds
         self.entersFullScreenWhenPlaybackBegins = entersFullScreenWhenPlaybackBegins
 
-        self.controller = AVPlayerViewController()
         super.init()
-
-        configureController(showsPlaybackControls: showsPlaybackControls)
-        observePlayer(player)
     }
 
     // MARK: AVPlayerViewControllerDelegate
@@ -67,15 +63,20 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
         willEndFullScreen?(playerViewController, coordinator)
     }
     
-    private func configureController(showsPlaybackControls: Bool) {
+    public func configureController(showsPlaybackControls: Bool) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = showsPlaybackControls
         controller.entersFullScreenWhenPlaybackBegins = entersFullScreenWhenPlaybackBegins
         controller.videoGravity = .resizeAspectFill
         controller.delegate = self
+        
+        self.controller = controller
 
-        // Force controls to show initially
         forceShowControls(true)
+        observePlayer(player)
+        
+        return controller
     }
 
     private func observePlayer(_ player: AVPlayer?) {
@@ -83,17 +84,17 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
         timeControlStatusObservation = player.observe(\.timeControlStatus, changeHandler: { [weak self] player, _ in
             guard let self else { return }
 
-            self.statusDidChange?(AZVideoPlayerStatus(
+            statusDidChange?(AZVideoPlayerStatus(
                 timeControlStatus: player.timeControlStatus,
                 volume: player.volume
             ))
 
-            self.forceShowControls(player.timeControlStatus == .paused)
+            forceShowControls(player.timeControlStatus == .paused)
 
-            if self.shouldEnterFullScreenPresentation(of: player) {
-                self.controller.enterFullScreenPresentation(animated: true)
+            if shouldEnterFullScreenPresentation(of: player) {
+                controller?.enterFullScreenPresentation(animated: true)
             } else if player.timeControlStatus == .playing {
-                self.shouldEnterFullScreenPresentationOnNextPlay = true
+                shouldEnterFullScreenPresentationOnNextPlay = true
             }
         })
     }
@@ -118,6 +119,6 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
     }
 
     private func forceShowControls(_ show: Bool) {
-        controller.setValue(!show, forKey: "canHidePlaybackControls")
+        controller?.setValue(!show, forKey: "canHidePlaybackControls")
     }
 }

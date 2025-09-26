@@ -35,7 +35,7 @@ public struct AZVideoPlayer: UIViewControllerRepresentable {
     }
 
     public func makeUIViewController(context: Context) -> AVPlayerViewController {
-        delegate.controller
+        delegate.configureController(showsPlaybackControls: true)
     }
 
     public func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
