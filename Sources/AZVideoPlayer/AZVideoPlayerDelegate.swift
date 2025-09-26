@@ -23,6 +23,7 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
 
     private var timeControlStatusObservation: NSKeyValueObservation?
     private var shouldEnterFullScreenPresentationOnNextPlay = true
+    private var isFullScreen: Bool = false
 
     init(
         player: AVPlayer?,
@@ -49,6 +50,8 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
         _ playerViewController: AVPlayerViewController,
         willBeginFullScreenPresentationWithAnimationCoordinator coordinator: UIViewControllerTransitionCoordinator
     ) {
+        isFullScreen = true
+        
         willBeginFullScreen?(playerViewController, coordinator)
     }
 
@@ -56,6 +59,8 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
         _ playerViewController: AVPlayerViewController,
         willEndFullScreenPresentationWithAnimationCoordinator coordinator: UIViewControllerTransitionCoordinator
     ) {
+        isFullScreen = false
+        
         if !pausesWhenFullScreenPlaybackEnds {
             continuePlayingIfPlaying(player, coordinator)
         }
@@ -100,7 +105,10 @@ public final class AZVideoPlayerDelegate: NSObject, AVPlayerViewControllerDelega
     }
 
     private func shouldEnterFullScreenPresentation(of player: AVPlayer) -> Bool {
-        guard entersFullScreenWhenPlaybackBegins else { return false }
+        guard entersFullScreenWhenPlaybackBegins, !isFullScreen else {
+            return false
+        }
+        
         return player.timeControlStatus == .playing && shouldEnterFullScreenPresentationOnNextPlay
     }
 
